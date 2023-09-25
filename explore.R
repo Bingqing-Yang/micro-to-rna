@@ -34,19 +34,14 @@ rownames(marr) <- genes;
 rownames(rseq) <- genes;
 
 
-# Delete some genes expressed(RNA-seq) 0 among all samples
-uni_count_idx <- c()
-for (i in 1:nrow(rseq)){
-  unique_count <- length(unique(rseq[i, ]))
-  if (unique_count < 2){
-    uni_count_idx <- append(uni_count_idx, i)
-  }
-}
+# Delete genes expressed 0 among all samples
+uniq.num <- apply(rseq, 1, function(x) length(unique(x)))
+uniq.lst <- which(uniq.num == 1)
 
-marr <- marr[-uni_count_idx, ]
-rseq <- rseq[-uni_count_idx, ]
-genes <- genes[-uni_count_idx]
-entrezs <- entrezs[-uni_count_idx];
+marr <- marr[-uniq.lst, ]
+rseq <- rseq[-uniq.lst, ]
+genes <- genes[-uniq.lst]
+entrezs <- entrezs[-uniq.lst];
 dim(marr) # 12659  294
 dim(rseq) # 12659   294
 
@@ -70,14 +65,14 @@ rseqt <- as.matrix(rseqt);
 
 smoothScatter(marrt, rseqt);
 plot(marrt, rseqt, pch=".");
-# ---
 
-# gene-specific (i.e. probe-specific) analysis
 
+# Mean expressed for each probes
 rseqt.m <- rowMeans(rseqt);
 marrt.m <- rowMeans(marrt);
 plot(marrt.m, rseqt.m, pch = ".");
 
+# Range expressed for each probes
 marrt.lim <- c(min(marrt), max(marrt));
 rseq.lim <- c(min(rseqt, na.rm = TRUE), max(rseqt, na.rm = TRUE))
 
@@ -85,9 +80,12 @@ rseq.lim <- c(min(rseqt, na.rm = TRUE), max(rseqt, na.rm = TRUE))
 
 # ---
 
-# explore a way to automatically classify microarray probes
+# Explore a way to measure the quality of probes 
+# according to relation between Microarray and RNA-seq
+# good probes have coherence between diff sequencing tools
 
-# Calculate correlation for each probes
+
+# Correlation
 marr.rseq.cors <- unlist(lapply(
   genes.f,
   function(gene) {
@@ -95,17 +93,16 @@ marr.rseq.cors <- unlist(lapply(
   }
 ));
 
-
-hist(marr.rseq.cors, breaks=100)
+hist(marr.rseq.cors, breaks=100) # Some Negative correlation 
 mean(marr.rseq.cors^2 > 0.5, na.rm=TRUE)
 head(sort(marr.rseq.cors, decreasing=TRUE))
 
-# Calculate the ratio of first explained variance for each probes
+# First explained variance by PCA
 pca_lst <- pca.ratio(mar = marrt ,rna = rseqt)
 hist(pca_lst, breaks = 100)
 
 
-# Calculate slope for each probes
+# Slope
 slope_info <- unlist(lapply(genes.f,
   function(gene) {
     s_i <- cov(marrt[gene, ],rseqt[gene, ])/ var(marrt[gene, ])
@@ -127,7 +124,7 @@ probes.info <- data.frame(
   slope = slope_info,
   PCA_1 = pca_lst,
   mutual = mutual_I
-);
+  )
 
 col_label <- c("low" = "blue", "high" = "red")
 # Low correlation(less than 0.2) are mainly concentrated in the left 
@@ -146,49 +143,52 @@ ggplot(probes.info, aes(x = marr_mean, y = rseq_mean, colour = slope)) +
 ggplot(probes.info, aes(x = marr_mean, y = rseq_mean, colour = ifelse(mutual_I < 0.1, "low", "high"))) +
   theme_classic() + geom_point(alpha=0.1) + scale_color_manual(values = col_label)
 
+##Conclusion:
+# 1. bad quality probes(non-functional probes) have low mean of Microarray intensify;
+
 
 # Non-functional probes 
-# mutual_info of some probes show 0.     
-mutual.nof.cond <- mutual_I < 0.05 
-probes.nof <- subset(probes.info, mutual.nof.cond)
+# CONDITION:  mutual_I < 0.05  
+MI.cod <- quantile(mutual_I, 0.15)
+nof.cond <- mutual_I < MI.cod
+probes.nof <- subset(probes.info, nof.cond)
+probes.nof <- subset(probes.info, nof.cond)
 rseqt.nof <- rseqt[probes.nof$genes,  ]
 marrt.nof <- marrt[probes.nof$genes,  ]
-dim(probes.nof)[1] # 2160 
+dim(probes.nof)[1] # 1859
 
 # Functional probes
-probes.f <- subset(probes.info, !mutual.nof.cond)
+probes.f <- subset(probes.info, !nof.cond)
 rseqt.f <- rseqt[rownames(rseqt) %in% probes.f$genes,  ]
 marrt.f <- marrt[rownames(marrt) %in% probes.f$genes,  ]
-dim(probes.f)[1] # 10234
+dim(probes.f)[1] # 10535
 
 
 
-# Calculate linear regression for each probes
-lm.fit <- lapply(probes.f$genes, function(g) {
- lm(rseqt.f[g, ] ~ marrt.f[g, ])
-})
-summary_lst <- lapply(lm.fit, summary)
+# Linear regression
+## Linear model
+lm <- lapply(probes.f$genes, function(g) {lm(rseqt.f[g, ] ~ marrt.f[g, ])})
+summary_lst <- lapply(lm, summary)
 
-
+## linear property for each probes
 rse <- r.2 <- adj.r.2 <- coef <- c()
 for (i in 1:dim(probes.f)[1]){
   rse <- append(rse, summary_lst[[i]]$sigma) # Residual standard error
   r.2 <- append(r.2, summary_lst[[i]]$r.squared)
   adj.r.2 <- append(adj.r.2, summary_lst[[i]]$adj.r.squared)
-  #  coef <- append(coef, summary_lst[[names(genes.fd[i])]]$coefficients)
 }
 probes.f <- cbind(probes.f, rse = rse, r.2 = r.2, adj.r.2 = adj.r.2)
 hist(r.2, breaks = 100)
 
 
-
-# Easy linear functional probes classified by R^2
-r.2.curve.cond <- r.2 < 0.95
-probes.f.lin <- subset(probes.f, !r.2.curve.cond)
-curve_idx <- which(r.2.curve.cond)
+# Linear functional probes classified by R^2
+# 237 probes follow linear model
+curve.cond <- r.2 < 0.95
+probes.f.lin <- subset(probes.f, !curve.cond)
+curve_idx <- which(curve.cond)
 rseqt.f.lin <- rseqt.f[-curve_idx, ]
 marrt.f.lin <- marrt.f[-curve_idx, ]
-func.lin <- lm.fit[rownames(rseqt.f.lin)]
+func.lin <- lm[rownames(rseqt.f.lin)]
 dim(rseqt.f.lin)[1]  # 237
 length(func.lin) # 237
   
@@ -198,24 +198,29 @@ length(func.lin) # 237
 # Generate Scatter plots and fev for easy linear functional probes
 
 # num.pic: draw num.pic pictures
-# label: named the picture(Y/N/S/HS/C)
+# label: whether to named the picture(Y/N/S/HS/C)
+# view: TRUE/FALSE (whether to view pic)
+# press: TRUE/FALSE(whether see pic one by one )
 # output fev.lin: Calculate fev 
-fev.lin <- linear.scatter(marrt.f.lin, rseqt.f.lin, 
-                 probes.f.lin, func.lin,
-                 folderpath = "linear_probes_plots", 
-                 num.pic = 10, label = FALSE)
 
+fev.lin <- lin.scatter(marrt.f.lin, rseqt.f.lin, probes.f.lin, func.lin,
+                 folderpath = "probes_plots", num.pic = 5, label = FALSE, 
+                 level = 0.95, press = TRUE, view = TRUE)
+
+
+
+
+# --- Explore nonlinear probes ---
 
 # Easy curve functional probes
-probes.f.cur <- subset(probes.f, r.2.curve.cond)
+probes.f.cur <- subset(probes.f, curve.cond)
 rseqt.f.cur <- rseqt.f[curve_idx, ]
 marrt.f.cur <- marrt.f[curve_idx, ]
-dim(marrt.f.cur) # 9997   294
+dim(marrt.f.cur) # 10298   294
 
 
-
-# Deeper looking at curve probes
-# Three categories: S curve / half-S curve / Inverted-C curve
+# Classify curve probes into three categories:
+## S curve / half-S curve / Inverted-C curve
 plot(probes.f.cur$mutual, probes.f.cur$r.2)
 r.2.cond <- quantile(probes.f.cur$r.2)[c(2,4)]
 mutual.cond <- quantile(probes.f.cur$mutual)[c(2,4)]
@@ -223,24 +228,31 @@ abline(h = r.2.cond,  col = "red")
 abline(v = mutual.cond, col = "green")
 
 
+## Look at scatter of diff area according quantile of mutual and R^2
 probes.h.m <- which(probes.f.cur$mutual > mutual.cond[2] & probes.f.cur$r.2 < r.2.cond[2]);
-length(probes.h.m) # 411
+length(probes.h.m) # 417
+search.scatter(marrt.f.cur, rseqt.f.cur, probes.h.m, probes.f.cur, pic_num = 10)
 
-# Same shape of scatter plot
+
 probes.l.h <- which(probes.f.cur$mutual < mutual.cond[1] & probes.f.cur$r.2 > r.2.cond[2])
-length(probes.l.h) # 35
+length(probes.l.h) # 37
+search.scatter(marrt.f.cur, rseqt.f.cur, probes.l.h, probes.f.cur, pic_num = 10)
 
 probes.l.m <- which(probes.f.cur$mutual < mutual.cond[1] & probes.f.cur$r.2 < r.2.cond[2] & probes.f.cur$r.2 > r.2.cond[1] )
-length(probes.l.m) # 360
+length(probes.l.m) # 370
+search.scatter(marrt.f.cur, rseqt.f.cur, probes.l.m, probes.f.cur, pic_num = 10)
 
 probes.m.l <- which(probes.f.cur$mutual < mutual.cond[2] & probes.f.cur$mutual > mutual.cond[1] & probes.f.cur$r.2 < r.2.cond[1])
-length(probes.m.l) # 395
+length(probes.m.l) # 407
+search.scatter(marrt.f.cur, rseqt.f.cur, probes.m.l, probes.f.cur, pic_num = 10)
 
 probes.m.h <- which(probes.f.cur$mutual <  mutual.cond[2] & probes.f.cur$mutual > mutual.cond[1] & probes.f.cur$r.2 > r.2.cond[2])
-length(probes.m.h) # 375
+length(probes.m.h) # 380
+search.scatter(marrt.f.cur, rseqt.f.cur, probes.m.h, probes.f.cur, pic_num = 10)
 
 probes.l.l <- which(probes.f.cur$mutual < mutual.cond[1] & probes.f.cur$r.2 < r.2.cond[1])
-length(probes.l.l) # 2104
+length(probes.l.l) # 2168
+search.scatter(marrt.f.cur, rseqt.f.cur, probes.l.l, probes.f.cur, pic_num = 10)
 
 
 
@@ -261,6 +273,9 @@ length(probes.l.l) # 2104
 # Non-converge curve probes(.2%) in SCAM
 non.conver.probes <- c(1975,2071,2127,2183,2796,2809,3421,4234,4882,5238,5247,5292,6124,6837,7601,7950,8176,8223,8359,8856,9176,9498) 
 search.scatter(marrt.f.cur, rseqt.f.cur, non.conver.probes, probes.f.cur)
+marrt.f.cur.noconv <- marrt.f.cur[non.conver.probes, ]
+rseqt.f.cur.noconv <- rseqt.f.cur[non.conver.probes, ]
+probes.f.cur.noconv <- probes.f.cur[non.conver.probes, ]
 # rownames(marrt.f.cur)[non.conver.probes]
 # noisy probes: "RASA2" "TRPV6"  "SCN8A" "KLRG1"  "CMKLR2" "APBB1IP" "BTRC" "RTEL1" "SLCO1A2" "FGF12"  "LTB4R" 
 # non-noisy probes: "OPA3" "ITGAX" "RFWD3" "TRPV6"  "EFCC1"  "TMEM104" "RPL29" "ROCK2" "MED25" "WDFY3" "ZNF780B"
@@ -269,31 +284,191 @@ search.scatter(marrt.f.cur, rseqt.f.cur, non.conver.probes, probes.f.cur)
 probes.f.cur.conv <- probes.f.cur[-non.conver.probes, ]
 marrt.f.cur.conv <- marrt.f.cur[-non.conver.probes, ]
 rseqt.f.cur.conv <- rseqt.f.cur[-non.conver.probes, ]
-dim(marrt.f.cur.conv)
+
+dim(marrt.f.cur.conv) # 10276   294
 
 
 # Generate scatter and fev of curve probes based on SCAM 
-fev.curve <- curve.scatter(marrt.f.cur.conv, rseqt.f.cur.conv, 
-                           probes.f.cur.conv, k = 4)
-                          
+# curve.scatter <- function(mar, rna, probes, num.pic, meth = "ts", k)
+# num.pic: the nember of wanted printing picture;
+# k: parameter of k in scam;
 
-# All curve probes is processed on GAM
-mar = marrt.f.cur
-rna = rseqt.f.cur
-probes = probes.f.cur
+fev.curve <- curve.scatter(marrt.f.cur.conv, rseqt.f.cur.conv, 
+                           num.pic = 10, probes.f.cur.conv, k = 4)
+
+
+length(fev.curve)
+fev <- fev.curve[1]
+coef.scam <- fev.curve[2]
+
+
+
+############TODO
+# index of suspected heteroskedasticity probes by looking residual plots
+# hetero <- c(8,263, 332, 342, 356, 360, 374,  397, 405, 406, 409, 435, 468, 482, 487, 510)
+# 8, 342,356, 360
+i = 360
+Y = rseqt.f.cur.conv
+X = marrt.f.cur.conv
+y <- Y[i, ]
+x <- X[i, ]
+fit1 <- scam(y ~ s(x, k = 10, bs = "mpi"));
+scam.check(fit1)
+k.check(fit1)
+d <- data.frame(x = x)
+pred1 <- predict(fit1, se.fit = TRUE,type="response", d)
+idx <- order(x)
+
+
+fit2 <- scam(y ~ s(x, k = 10, bs = "mpi"), weights =  residuals(fit1)^-2)
+fit3 <- scam(y ~ s(x, k = 10, bs = "mpi"), family = gaussian(link = "log"), weights =  residuals(fit1)^-2)
+scam.check(fit2)
+k.check(fit2)
+AIC(fit1, fit2, fit3)
+
+
+pred2 <- predict(fit2, se.fit = TRUE,type="response", d)
+pred3 <- predict(fit3, se.fit = TRUE,type="response", d)
+plot(x, y)
+lines(x[idx], pred1$fit[idx], col = "green")
+lines(x[idx], pred2$fit[idx], col = "blue")
+lines(x[idx], pred3$fit[idx], col = "red")
+
+
+plot(x, residuals(fit1)/sd(residuals(fit1)), col = "green")
+points(x, residuals(fit2)/sd(residuals(fit2)), col = "blue")
+points(x, residuals(fit3)/sd(residuals(fit3)), col = "red")
+
+
+
+lis <-c (2,8,11,41,55)
+
+residual.plot<- function(X, Y){
+  for (i in 66:dim(X)[1]){
+    y <- Y[i, ]
+    x <- X[i, ]
+    fit <- scam(y ~ s(x, k = 5, bs = "mpi"));
+    # d <- data.frame(x = x)
+    # pred <- predict(fit, d)
+    idx <- order(x)
+    #lines(x[idx], y.hat[idx])
+    norm.res <- residuals(fit)/sd(residuals(fit))
+    plot(x, norm.res, main = paste0("This is: ", i))
+    abline(h = c(2, -2), col = 'red')
+    print(paste0("This is: ", i))
+    Sys.sleep(2)
+  }}
+
+residual.plot(Y = rseqt.f.cur.conv, X = marrt.f.cur.conv)
+
+
+
+
+
+## conclusion
+# 1. For linear probes, residual plot is not obvious, BP-test would be obvious;
+# 2. why reduce heteroskedasticity but AIC increased -- i = 510, 342, 356, 360, 405, 406, 468, 487
+# 3. Model fitting effect would be bad if weitht-scam but it does not have heteroskedasticity; 
+# 4. WHY lines of weighted-scam become linear? i =8
+# 5. Even weighted-scam, heteroskedasticity still appear from residual plot;--i = 8
+
+## Solution:
+# 1. Look at most scatter plot of probe having heteroskedasticity, try to a suitable weight for them;
+# 2. filter sample with high and low quantile exp in Rna or Microarray would be better to reduce heteroskedasticity, because point is Centralized 
+# 3. Quantitative methods to detect heteroskedasticity in nonlinear probes;
+### TODO
+# 1. Checking the effect of heteroskedasticity on scam models
+##
+
+
+
+
+
+# dev1.d <- fev.curve[[3]]
+# dev1.se <- fev.curve[[4]]
+# dev2.d <- fev.curve[[5]]
+# dev2.se <- fev.curve[[6]]
+# dev1.d.sum <- apply(dev1.d, 2, sum)
+# dev1.d.mean <- apply(dev1.d, 2, mean)
+# 
+# library(Rtsne)
+# 
+
+# 
+# coef.low.dim <- data.frame(
+#   
+#   x = coef.tsne$Y[ ,1],
+#   y = coef.tsne$Y[ ,2]
+# )
+# 
+# 
+# ggplot(coef.low.dim, aes(x = x, y = y, color = dev1.d.mean)) +
+#   geom_point()
+# 
+# hist(dev1.d.mean, breaks = 100)
+# hist(dev1.d.sum, breaks = 100)
+# length(which(dev1.d.mean > 2)) # 2.5%    249
+# 
+# sear.lst <- which(dev1.d.mean > 2)
+# mar <- marrt.f.cur.conv[sear.lst, ]
+# rna <- rseqt.f.cur.conv[sear.lst, ]
+# probes <- probes.f.cur.conv[sear.lst, ]
+#  
+# for (i in 1:length(sear.lst)) {
+#   fit <- scam(rna[i, ] ~ s(mar[i, ], k = 4, bs = "mpi"));
+#   d <- data.frame(x1 = mar[i, ]);
+#   plot(mar[i, ], rna[i, ])
+#   Sys.sleep(1)
+# }
+# 
+
+
+
+##########TODO
+# non-converge probes
+
+
+
+non.conver.probes
+mar = marrt.f.cur.noconv
+rna = rseqt.f.cur.noconv
+probes = probes.f.cur.noconv
+
 fev.lst <- c()
-for (i in 1:dim(marrt.f.cur)[1]) {
+for (i in 1:dim(mar)[1]) {
   dev.new()
   dev.set(dev.list()[['RStudioGD']])
-  scatter(i, mar, rna,  probes)
   
-  
+  i = 21
+ 
   x1 <- mar[i, ];
   x2 <- rna[i, ];
-  fit <- gam(x2 ~ s(x1));
+  fit <- scam(x2 ~ s(x1, bs = "mpi"), optimizer="bfgs");
+  
+  fit$aic
+  fit$sp # estimated smoothing parameter
+  fit$bfgs.info #
+  
+  
+  plot(x1, fit$residuals)
+  scam.check(fit)   # test model
+  summary(fit)
+  
+
+  fit$scam
+  fit$coefficients
+  fit$aic
+  fit$edf
+
+  
+  
+  plot(fit) # check trend fo parameter 
+  gam.check(fit)  # p-value of parameter to check the k is suitable
+  
   d <- data.frame(x1 = x1);
   x2.hat <- predict(fit, se.fit = TRUE, d);
   
+  scatter(i, mar, rna,  probes)
   idx <- order(x1);
   lines(x1[idx], x2.hat$fit[idx], lwd = 2, type = "l",col = 'red')
   
@@ -305,12 +480,6 @@ for (i in 1:dim(marrt.f.cur)[1]) {
 
 
 
-#### Summary:
-# 1% curve probes do not converge on SCAM
-# non-converge curve probe：some noisy and some non-noisy
-# The predicted model on both scam and gam have good predictive effect
-# GAM is not a robust model because k is hard to estimate, and diff k have diff model trend
-# Some probes on GAM has decreasing trend
 
 ### TODO
 # classify probes category and fit on diff func
