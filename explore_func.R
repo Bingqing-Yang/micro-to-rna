@@ -260,7 +260,8 @@ curve.scatter <- function(mar, rna, probes, num.pic, meth = "ts", k) {
 }
 
 
-
+# Thanks for contributing the code below form Dr.Shih, 
+# Please accept my gratitude for sharing your knowledge and time.
 # predict mean with prediction interval for new data
 predict_interval_scam <- function(fit, newdata, level=0.95) {
   y.hat <- predict(fit, se.fit=TRUE, type="response", newdata);
