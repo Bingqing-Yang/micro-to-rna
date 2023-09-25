@@ -204,8 +204,9 @@ length(func.lin) # 237
 # output fev.lin: Calculate fev 
 
 fev.lin <- lin.scatter(marrt.f.lin, rseqt.f.lin, probes.f.lin, func.lin,
-                 folderpath = "probes_plots", num.pic = 5, label = FALSE, 
-                 level = 0.95, press = TRUE, view = TRUE)
+                 folderpath = "probes_plots", num.pic = 5, 
+                 label = FALSE, level = 0.95, press = TRUE, view = TRUE)
+
 
 
 

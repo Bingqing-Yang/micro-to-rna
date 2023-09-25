@@ -84,7 +84,9 @@ lin.scatter <- function(mar, rna, probes, func.lin, folderpath, num.pic , label,
 
     # Scatter plot with PI
     scatter(i, mar, rna,  probes, pred = lin.pred$pred)
-
+    Sys.sleep(2)
+    scatter(i, mar, rna,  probes, pred = lin.pred$wpred)
+    Sys.sleep(2)
     # Picture by picture.
     if (press == TRUE & label ==TRUE) {
       
@@ -161,22 +163,35 @@ linear <- function(i, x, y, alpha){
   
   model <- lm(y[i, ] ~ x[i, ])
   new <- data.frame(x[i, ])
+  weight = residuals(model)^-2
+  weight.model <- lm(y[i, ] ~ x[i, ], weights = weight)
   
-  # confidence band 
-  y.hat <- predict.lm(model, newdata = new, interval = "confidence", alpha)
-  
-  # prediction band
+  # LSE prediction band 
+  y.hat <- predict.lm(model, newdata = new, interval = "prediction", alpha)
   y.pred <- predict.lm(model, newdata = new, interval = "prediction", alpha)
+  
+  # WLSE prediction band
+  wy.pred <- predict.lm(weight.model, newdata = new, weights = weight, interval = "prediction", alpha)
+  wy.hat <- predict.lm(weight.model, newdata = new, weights = weight, interval = "prediction", alpha)
+
   
   pred <- data.frame(
     fit = y.hat$fit[ ,1],
-    upr = y.pred$fit[ ,2],
-    lwr = y.pred$fit[ ,3]
+    lwr = y.pred$fit[ ,2],
+    upr = y.pred$fit[ ,3]
   )
+  weight.pred <- data.frame(
+    fit = wy.hat$fit[ ,1],
+    lwr = wy.pred$fit[ ,2],
+    upr = wy.pred$fit[ ,3]
+  )
+  
   
   output <- list()
   output$model = model
+  output$wmodel = weight.model
   output$pred = pred
+  output$wpred = weight.pred
 
   return(output)
 }
