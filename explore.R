@@ -302,52 +302,47 @@ fev <- fev.curve[1]
 coef.scam <- fev.curve[2]
 
 
-
 ############TODO
 # index of suspected heteroskedasticity probes by looking residual plots
-# hetero <- c(8,263, 332, 342, 356, 360, 374,  397, 405, 406, 409, 435, 468, 482, 487, 510)
-# 8, 342,356, 360
-i = 360
+# hetero <- c(8,263, 332, 342, 356, 360, 374,  397, 405, 406, 409, 435, 468, 482, 487, 510, 525, 551, 554, 555, 564)
+# 8, 342,356, 360, 564
+i = 564
 Y = rseqt.f.cur.conv
 X = marrt.f.cur.conv
 y <- Y[i, ]
 x <- X[i, ]
-fit1 <- scam(y ~ s(x, k = 10, bs = "mpi"));
+d <- data.frame(x = x)
+fit1 <- scam(y ~ s(x, k = 20, bs = "mpi"));
+pred1 <- predict(fit1, se.fit = TRUE,type="response", d)
 scam.check(fit1)
 k.check(fit1)
-d <- data.frame(x = x)
-pred1 <- predict(fit1, se.fit = TRUE,type="response", d)
-idx <- order(x)
 
 
-fit2 <- scam(y ~ s(x, k = 10, bs = "mpi"), weights =  residuals(fit1)^-2)
-fit3 <- scam(y ~ s(x, k = 10, bs = "mpi"), family = gaussian(link = "log"), weights =  residuals(fit1)^-2)
+fit2 <- scam(y ~ s(x, k = 20, bs = "mpi"), weights =  residuals(fit1)^-2)
+pred2 <- predict(fit2, se.fit = TRUE,type="response", d)
 scam.check(fit2)
 k.check(fit2)
-AIC(fit1, fit2, fit3)
+AIC(fit1, fit2)
 
 
-pred2 <- predict(fit2, se.fit = TRUE,type="response", d)
-pred3 <- predict(fit3, se.fit = TRUE,type="response", d)
 plot(x, y)
+idx <- order(x)
 lines(x[idx], pred1$fit[idx], col = "green")
 lines(x[idx], pred2$fit[idx], col = "blue")
-lines(x[idx], pred3$fit[idx], col = "red")
 
 
 plot(x, residuals(fit1)/sd(residuals(fit1)), col = "green")
 points(x, residuals(fit2)/sd(residuals(fit2)), col = "blue")
-points(x, residuals(fit3)/sd(residuals(fit3)), col = "red")
 
 
-
+#############TODO
 lis <-c (2,8,11,41,55)
 
 residual.plot<- function(X, Y){
-  for (i in 66:dim(X)[1]){
+  for (i in 515:dim(X)[1]){
     y <- Y[i, ]
     x <- X[i, ]
-    fit <- scam(y ~ s(x, k = 5, bs = "mpi"));
+    fit <- scam(y ~ s(x, k = 20, bs = "mpi"));
     # d <- data.frame(x = x)
     # pred <- predict(fit, d)
     idx <- order(x)
@@ -363,19 +358,16 @@ residual.plot(Y = rseqt.f.cur.conv, X = marrt.f.cur.conv)
 
 
 
-
-
 ## conclusion
 # 1. For linear probes, residual plot is not obvious, BP-test would be obvious;
-# 2. why reduce heteroskedasticity but AIC increased -- i = 510, 342, 356, 360, 405, 406, 468, 487
-# 3. Model fitting effect would be bad if weitht-scam but it does not have heteroskedasticity; 
-# 4. WHY lines of weighted-scam become linear? i =8
-# 5. Even weighted-scam, heteroskedasticity still appear from residual plot;--i = 8
+# 2. There is a situation that weighted-scam reducing heteroskedasticity but AIC increased -- i = 564:
+#      This is because of basis func and the number of it; It would changed if increased k;
+# 3. Model fitting effect would be bad if weitht-scam but it does not have heteroskedasticity -- i = 564; 
+
 
 ## Solution:
-# 1. Look at most scatter plot of probe having heteroskedasticity, try to a suitable weight for them;
-# 2. filter sample with high and low quantile exp in Rna or Microarray would be better to reduce heteroskedasticity, because point is Centralized 
-# 3. Quantitative methods to detect heteroskedasticity in nonlinear probes;
+# 1. filter sample with high and low quantile exp in Rna or Microarray would be better to reduce heteroskedasticity, because point is Centralized 
+# 2. Quantitative methods to detect heteroskedasticity in nonlinear probes;
 ### TODO
 # 1. Checking the effect of heteroskedasticity on scam models
 ##
