@@ -164,6 +164,7 @@ linear <- function(i, x, y, alpha){
   
   # confidence band 
   y.hat <- predict.lm(model, newdata = new, interval = "confidence", alpha)
+  
   # prediction band
   y.pred <- predict.lm(model, newdata = new, interval = "prediction", alpha)
   
@@ -259,9 +260,8 @@ curve.scatter <- function(mar, rna, probes, num.pic, meth = "ts", k) {
   
 }
 
-
-# Thanks for contributing the code below form Dr.Shih, 
-# Please accept my gratitude for sharing your knowledge and time.
+# Code snippet from Dr.shih of explained-variance and thanks to him
+# Original code: https://github.com/djhshih/explained-variance.git
 # predict mean with prediction interval for new data
 predict_interval_scam <- function(fit, newdata, level=0.95) {
   y.hat <- predict(fit, se.fit=TRUE, type="response", newdata);
