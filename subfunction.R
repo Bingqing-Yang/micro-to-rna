@@ -23,7 +23,7 @@ library(scam)
 #' @param w weight of weighted linear model
 #' @return list of fev values in linear model \code{fev.lin}, fev values in weighted linear model \code{fev.wlin}
 #' @export
-linear.scatter <- function(X, Y, probes, pred, folder, num.pic, w, level, label, view, press) {
+scatter.s <- function(X, Y, probes, pred, folder, num.pic, w, level, label, view, press) {
   # folder of picture
   if (!file.exists(folder)) {
     dir.create(folder)
@@ -187,19 +187,19 @@ linear <- function(i, X, Y, level, weight = NULL) {
 
 }
 
-#' Linear model or weighted linear model
+#' SCAM model
 #'
-#' Implement linear model or weighted linear model according to the input parameter weight;
-#' get prediction interval of specified model;
+#' Implement scam model or weighted scam model according whether input weight parameter
+#' 
 #'
 #'
 #' @param X  microarray data where rows are gene, columns are samples
 #' @param Y  rna-seq data where rows are gene, columns are samples
 #' @param i  i-th gene/probes
-#' @param folder folder for saving picture
 #' @param level confidence level
 #' @param weight weight of model
-#' @return list of models \code{model} and prediction interval \code{pred}
+#' @return list of response prediction \code{fit} and upper prediction interval \code{upr}
+#'          and lower prediction interval \code{lwr}
 #' @export
 SCAM.model <- function(i, k, X, Y, level, weight = NULL) {
 
@@ -248,9 +248,9 @@ predict_interval_scam <- function(model, newdata, level) {
 
 
 
-#' Scatter plot
+#' Scatter plot for one gene
 #'
-#' Scatter plot given predicted result of model
+#' Scatter plot given predicted result of model for one gene
 #'
 #'
 #' @param X  microarray data where rows are gene, columns are samples
@@ -296,8 +296,13 @@ scatter <- function(i, X, Y, probes, pred) {
   }
 }
 
-
-
+# Only Scatter plot for special gene index and quantities
+search.scatter <- function(X, Y, search_i, probes, pred = NULL) {
+  for (i in search_i) {
+    scatter(i, X, Y, probes, pred)
+    readline("Please enter to continue...")
+  }
+} 
 
 #' Mutual information
 #'
