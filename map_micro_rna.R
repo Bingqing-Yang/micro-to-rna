@@ -135,36 +135,30 @@ length(func.lin) # 237
 
 # --- linear model ---
 
-# linear model: fit, lwr, upr, fit.se, model.res
-lin.pred <- unlist(lapply(1:dim(marrt.f.lin)[1], function(i) {
+# Prediction in linear model: fit, lwr, upr, fit.se, model.res
+lin.pred <- lapply(1:dim(marrt.f.lin)[1], function(i) {
   linear(i, X = marrt.f.lin, Y = rseqt.f.lin, level = 0.95)
   }
-))
+)
 
 
 # Generate fev of liner model
-fev.lin <- lapply(1:length(lin.pred), function(i) {fev.func(rseqt.f.lin[i, ], lin.pred[[i]]$fit)})
+fev.lin <- unlist(lapply(1:length(lin.pred), function(i) {fev.func(rseqt.f.lin[i, ], lin.pred[[i]]$fit)}))
 
 
-# Generate Scatter plots and fev for easy linear functional probes
-
-# num.pic: draw num.pic pictures
+# Scatter plots of many genes fitted on the linear model
+scatter.s(X = marrt.f.lin, Y = rseqt.f.lin, probes = probes.f.lin, pred = lin.pred,
+               folder = "linear_plots", num.pic = 5, w = NULL,
+               level = 0.95, label = FALSE, press = TRUE, view = TRUE
+)
+# num.pic: num.pic pictures drawn
 # label: whether to named the picture(Y/N/S/HS/C)
 # view: TRUE/FALSE (whether to view pic)
 # press: TRUE/FALSE(whether see pic one by one )
 # output fev.lin: Calculate fev
 
-# Generate scatter plot and fev of liner model
-linear.scatter(X = marrt.f.lin, Y = rseqt.f.lin, probes = probes.f.lin, pred = lin.pred,
-               folder = "linear_plots", num.pic = 5, w = NULL,
-               level = 0.95, label = FALSE, press = TRUE, view = TRUE
-)
 
-
-
-# Generate fev of weighted liner model
-fev.lin <- lapply(1:length(wlin.pred), function(i) {fev.func(rseqt.f.lin[i, ], wlin.pred[[i]]$fit)})
-
+# --- weighted least square ---
 
 # weighted linear model: fit, lwr, upr, fit.se, model.res
 wlin.pred <- lapply(1:dim(marrt.f.lin)[1], function(i) {
@@ -173,9 +167,12 @@ wlin.pred <- lapply(1:dim(marrt.f.lin)[1], function(i) {
 )
 
 
+# Generate fev of weighted liner model
+fev.lin <- unlist(lapply(1:length(wlin.pred), function(i) {fev.func(rseqt.f.lin[i, ], wlin.pred[[i]]$fit)}))
 
-# Generate scatter plot and fev of weighted liner model
-linear.scatter(X = marrt.f.lin, Y = rseqt.f.lin, probes = probes.f.lin, pred = wlin.pred,
+
+# Scatter plots of many genes fitted on the weighted linear model
+scatter.s(X = marrt.f.lin, Y = rseqt.f.lin, probes = probes.f.lin, pred = wlin.pred,
                folder = "weighted_linear_plots", num.pic = 5, w = NULL,
                level = 0.95, label = FALSE, press = TRUE, view = TRUE
 )
@@ -192,7 +189,7 @@ dim(marrt.f.cur) # 10298   294
 
 # --- SCAM model ---
 
-# scam: fit, lwr, upr, fit.se, model.res
+# Prediction in scam: list of fit, lwr, upr, fit.se, model.res
 scam.pred <- lapply(1:dim(marrt.f.lin)[1], function(i) {
   SCAM.model(i, k = 10, X = marrt.f.lin, Y = rseqt.f.lin, level = 0.95)
   }
@@ -201,14 +198,19 @@ scam.pred <- lapply(1:dim(marrt.f.lin)[1], function(i) {
 
 X = marrt.f.cur
 Y = rseqt.f.cur
-for (i in 5773:dim(X)[1]) {
-  
+
+for (i in 800:dim(X)[1]) {
+
   SCAM.model(i, k = 10, X, Y, level = 0.95)
   print(paste0("This is :", i))
+ 
 }
+  
 
 
-no_converge <- c(809, 1083, 2003, 2744, 2754, 2828, 3372, 3748, 4157, 4538, 4617, 4672, 4917, 4925, 5192, 5524, 5772, 6309)
+
+no_converge <- c(809, 1083, 2003, 2744, 2754, 2828, 3372, 3748, 4157, 4538, 4617, 
+                 4672, 4917, 4925, 5192, 5524, 5772, 6309, 6670, 8781)
 
 
 
