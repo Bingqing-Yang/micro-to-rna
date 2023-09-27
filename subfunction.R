@@ -201,18 +201,26 @@ linear <- function(i, X, Y, level, weight = NULL) {
 #' @return list of response prediction \code{fit} and upper prediction interval \code{upr}
 #'          and lower prediction interval \code{lwr}
 #' @export
-SCAM.model <- function(i, k, X, Y, level, weight = NULL) {
+SCAM.model <- function(i, k.s, X, Y, level, weight = NULL) {
 
+  k.lst <- c()
   samples.g <- data.frame(
     x = X[i, ],
     y = Y[i, ]
   )
   
   new <- data.frame(x = X[i, ])
-  model <- scam(y ~ s(x, k = k, bs = "mpi"), data = samples.g) # tip: dim(model$model)[1] = dim(new)[1]
+  
+  k.best <- k.selection(samples.g$x, samples.g$y, k.s)
+  model <- scam(y ~ s(x, k = k.best, bs = "mpi"), data = samples.g) # tip: dim(model$model)[1] = dim(new)[1]
   y.pred <- predict_interval_scam(model, newdata = new, level)
-
-  return(y.pred)
+  
+  k.lst <- append(k.lst, k.best)
+  
+  list(
+    k.lst = k.lst,
+    y.pred = y.pred
+    )
 }
 
 
@@ -300,7 +308,7 @@ scatter <- function(i, X, Y, probes, pred) {
 search.scatter <- function(X, Y, search_i, probes, pred = NULL) {
   for (i in search_i) {
     scatter(i, X, Y, probes, pred)
-    readline("Please enter to continue...")
+    reafdline("Please enter to continue...")
   }
 } 
 
@@ -324,4 +332,32 @@ mutual_info <- function(X, Y, meth = "equalfreq") {
     MI_lst <- append(MI_lst, MI_i)
   }
   return(MI_lst)
+}
+
+
+
+k.selection <- function(x, y, k.s){
+  data.s <- data.frame()
+  for (i in k.s) {
+    tryCatch({
+      
+      fit <- scam(y ~ s(x, k = i, bs = "mpi"))
+      
+      data <- data.frame(
+        k = i,
+        sp = fit$sp, # 估计smooth parameter
+        aic = fit$aic,
+        gcv = fit$gcv.ubre,
+        res.2 = sum(fit$residuals^2)
+      )
+      
+      data.s <- rbind(data.s, data)
+    }, error = function(e) {
+      
+      message("Error occurred:", conditionMessage(e))
+      return(NULL)
+    })
+  }
+  k.best <- data.s$k[which.min(data.s$aic)]
+  return(k.best)
 }
