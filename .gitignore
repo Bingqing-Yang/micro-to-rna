@@ -9,4 +9,8 @@ Statistical-Methods-Seminar-Series
 weighted_lines_plots
 lse_vs_wlse
 *.rds
+DESCRIPTION
+explained-variance
+lse_vs_wlse.R
+map.micro.rna
 
