@@ -189,26 +189,21 @@ dim(marrt.f.cur) # 10298   294
 
 # --- SCAM model ---
 
+
 # Prediction in scam: list of fit, lwr, upr, fit.se, model.res
-scam.pred <- lapply(1:dim(marrt.f.lin)[1], function(i) {
-  SCAM.model(i, k = 10, X = marrt.f.lin, Y = rseqt.f.lin, level = 0.95)
+k.s <- c(seq(4, 20, 2))
+scam.pred <- lapply(1:dim(marrt.f.cur)[1], function(i) {
+  SCAM.model(i, k.s, X = marrt.f.cur, Y = rseqt.f.cur, level = 0.95)
   }
 )
 
 # Generate fev of scam model
-fev.scam <- unlist(lapply(1:length(lin.pred), function(i) {fev.func(rseqt.f.lin[i, ], scam.pred[[i]]$fit)}))
+fev.scam <- unlist(lapply(1:length(lin.pred), function(i) 
+  {fev.func(rseqt.f.lin[i, ], scam.pred[[i]]$fit)}
+  )
+)
 
 ###### TODO
-X = marrt.f.cur
-Y = rseqt.f.cur
-
-for (i in 800:dim(X)[1]) {
-
-  SCAM.model(i, k = 10, X, Y, level = 0.95)
-  print(paste0("This is :", i))
- 
-}
-
 no_converge <- c(809, 1083, 2003, 2744, 2754, 2828, 3372, 3748, 4157, 4538, 4617, 
                  4672, 4917, 4925, 5192, 5524, 5772, 6309, 6670, 8781)
 
@@ -216,6 +211,26 @@ no_converge <- c(809, 1083, 2003, 2744, 2754, 2828, 3372, 3748, 4157, 4538, 4617
 # look at scatter plot of non-converge probes
 search.scatter(X = X, Y = Y, search_i = no_converge, probes.f.cur)
 # It seems linear..
+
+
+fit <- scam(y ~ s(x, k = 20, bs = "mpi"))
+# k = 5, sp = 0.284568 GCV = 0.05184775 AIC = -33.76536
+
+scam.check(fit, rl.col = 3)
+gcv.ubre(fit)
+fit$gcv.ubre
+fit$redisuals
+residuals(fit)
+fit$sp # 估计smooth parameter
+fit$aic
+fit$gcv.ubre
+scam.check(fit)
+summary(fit)
+
+
+
+
+
 
 # TODO
 # 1. check the edf of non-conver probes, see does it equal to 1;
