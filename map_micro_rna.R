@@ -195,7 +195,10 @@ scam.pred <- lapply(1:dim(marrt.f.lin)[1], function(i) {
   }
 )
 
+# Generate fev of scam model
+fev.scam <- unlist(lapply(1:length(lin.pred), function(i) {fev.func(rseqt.f.lin[i, ], scam.pred[[i]]$fit)}))
 
+###### TODO
 X = marrt.f.cur
 Y = rseqt.f.cur
 
@@ -205,18 +208,16 @@ for (i in 800:dim(X)[1]) {
   print(paste0("This is :", i))
  
 }
-  
-
-
 
 no_converge <- c(809, 1083, 2003, 2744, 2754, 2828, 3372, 3748, 4157, 4538, 4617, 
                  4672, 4917, 4925, 5192, 5524, 5772, 6309, 6670, 8781)
 
 
+# look at scatter plot of non-converge probes
+search.scatter(X = X, Y = Y, search_i = no_converge, probes.f.cur)
+# It seems linear..
 
-
-# Generate fev of liner model
-fev.scam <- lapply(1:length(lin.pred), function(i) {fev.func(rseqt.f.lin[i, ], scam.pred[[i]]$fit)})
-
+# TODO
+# 1. check the edf of non-conver probes, see does it equal to 1;
 
 
