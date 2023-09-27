@@ -1,0 +1,12 @@
+*.Rproj.user
+*.Rhistory
+*.Ruserdata
+*.RData
+*.Rhistory
+new_cate_curve
+paper
+Statistical-Methods-Seminar-Series
+weighted_lines_plots
+lse_vs_wlse
+*.rds
+
