@@ -44,7 +44,7 @@ scatter.s <- function(X, Y, probes, pred, folder, num.pic, w, level, label, view
   for (i in 1:(num.pic)) {
 
     # Scatter plot with PI
-    predict.interval <- pred[[i]][c(1:3)]
+    predict.interval <- pred[[i]][c("fit", "lwr", "upr")]
     scatter(i, X, Y, probes, pred = predict.interval)
 
 
@@ -68,39 +68,6 @@ scatter.s <- function(X, Y, probes, pred, folder, num.pic, w, level, label, view
     }
   }
 
-}
-
-# Generate fev, prediction band based on scam and scatter plots
-curve.scatter <- function(mar, rna, probes, num.pic, meth = "ts", k) {
-  fev.lst <- c()
-  if (missing(num.pic)) {
-    num.pic <- dim(mar)[1]
-  } else {
-    stopifnot(num.pic < dim(mar)[1])
-    num.pic <- num.pic
-  }
-  coef.data <- data.frame()
-
-  for (i in 1:(num.pic)) {
-
-    x1 <- mar[i, ]
-    x2 <- rna[i, ]
-    fit <- scam(x2 ~ s(x1, k = k, bs = "mpi"))
-
-
-    coef.data <- rbind(coef.data, fit$coefficients)
-
-    d <- data.frame(x1 = x1)
-    x2.hat <- predict_interval_scam(fit, d)
-
-    # Scatter plot with PI
-    scatter(i, mar, rna, probes, x2.hat)
-
-    fev.hat <- fev.func(x2, fit$fitted.values)
-    fev.lst <- append(fev.lst, fev.hat)
-    print(paste("Processing item:", i))
-  }
-  return(list(fev.lst, coef.data))
 }
 
 
@@ -290,13 +257,7 @@ scatter <- function(i, X, Y, probes, pred) {
   }
 }
 
-# Only Scatter plot for special gene index and quantities
-search.scatter <- function(X, Y, search_i, probes, pred = NULL) {
-  for (i in search_i) {
-    scatter(i, X, Y, probes, pred)
-    reafdline("Please enter to continue...")
-  }
-} 
+
 
 #' Mutual information
 #'
