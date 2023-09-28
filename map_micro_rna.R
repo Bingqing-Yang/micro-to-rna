@@ -135,18 +135,18 @@ length(func.lin) # 237
 
 # --- linear model ---
 
-# Prediction in linear model: fit, lwr, upr, fit.se, model.res
+# Implement linear model for all genes
 lin.pred <- lapply(1:dim(marrt.f.lin)[1], function(i) {
   linear(i, X = marrt.f.lin, Y = rseqt.f.lin, level = 0.95)
   }
 )
 
 
-# Generate fev of liner model
+# Calculate fev for all gene based on linear model
 fev.lin <- unlist(lapply(1:length(lin.pred), function(i) {fev.func(rseqt.f.lin[i, ], lin.pred[[i]]$fit)}))
 
 
-# Scatter plots of many genes fitted on the linear model
+# Scatter plots of multiple genes fitted on the linear model
 scatter.s(X = marrt.f.lin, Y = rseqt.f.lin, probes = probes.f.lin, pred = lin.pred,
                folder = "linear_plots", num.pic = 5, w = NULL,
                level = 0.95, label = FALSE, press = TRUE, view = TRUE
@@ -155,77 +155,69 @@ scatter.s(X = marrt.f.lin, Y = rseqt.f.lin, probes = probes.f.lin, pred = lin.pr
 # label: whether to named the picture(Y/N/S/HS/C)
 # view: TRUE/FALSE (whether to view pic)
 # press: TRUE/FALSE(whether see pic one by one )
-# output fev.lin: Calculate fev
+
 
 
 # --- weighted least square ---
 
-# weighted linear model: fit, lwr, upr, fit.se, model.res
+# Implement SCAM model for all genes
 wlin.pred <- lapply(1:dim(marrt.f.lin)[1], function(i) {
   linear(i, X = marrt.f.lin, Y = rseqt.f.lin, level = 0.95, w = NULL)
 }
 )
 
 
-# Generate fev of weighted liner model
+# Calculate fev for all gene based on SCAM model
 fev.lin <- unlist(lapply(1:length(wlin.pred), function(i) {fev.func(rseqt.f.lin[i, ], wlin.pred[[i]]$fit)}))
 
 
-# Scatter plots of many genes fitted on the weighted linear model
+# Scatter plots of multiple genes fitted on the weighted linear model
 scatter.s(X = marrt.f.lin, Y = rseqt.f.lin, probes = probes.f.lin, pred = wlin.pred,
                folder = "weighted_linear_plots", num.pic = 5, w = NULL,
                level = 0.95, label = FALSE, press = TRUE, view = TRUE
 )
 
 
-# --- Nonlinear probes ---
 
-# curve probes
+# --- SCAM model ---
+
+# Nonlinear probes
 probes.f.cur <- subset(probes.f, curve.cond)
 rseqt.f.cur <- rseqt.f[curve_idx, ]
 marrt.f.cur <- marrt.f[curve_idx, ]
 dim(marrt.f.cur) # 10298   294
 
 
-# --- SCAM model ---
-
-
-# Prediction in scam: list of fit, lwr, upr, fit.se, model.res
+# Implement SCAM model for all genes
 k.s <- c(seq(4, 20, 2))
 scam.pred <- lapply(1:dim(marrt.f.cur)[1], function(i) {
   SCAM.model(i, k.s, X = marrt.f.cur, Y = rseqt.f.cur, level = 0.95)
+  #print(i)
   }
 )
 
-# Generate fev of scam model
-fev.scam <- unlist(lapply(1:length(lin.pred), function(i) 
-  {fev.func(rseqt.f.lin[i, ], scam.pred[[i]]$fit)}
+
+# Calculate fev of scam model
+fev.scam <- unlist(lapply(1:dim(marrt.f.cur)[1], function(i) 
+  {fev.func(rseqt.f.cur[i, ], scam.pred[[i]]$fit)}
   )
 )
-
-###### TODO
-no_converge <- c(809, 1083, 2003, 2744, 2754, 2828, 3372, 3748, 4157, 4538, 4617, 
-                 4672, 4917, 4925, 5192, 5524, 5772, 6309, 6670, 8781)
+hist(fev.scam, breaks = 100)
 
 
-# look at scatter plot of non-converge probes
-search.scatter(X = X, Y = Y, search_i = no_converge, probes.f.cur)
-# It seems linear..
+
+# Scatter plots of multiple genes fitted on SCAM model
+scatter.s(X = marrt.f.cur, Y = rseqt.f.cur, probes = probes.f.cur, pred = scam.pred,
+          folder = "scam_plots", num.pic = 5, w = NULL,
+          level = 0.95, label = FALSE, press = TRUE, view = TRUE
+)
 
 
-fit <- scam(y ~ s(x, k = 20, bs = "mpi"))
-# k = 5, sp = 0.284568 GCV = 0.05184775 AIC = -33.76536
 
-scam.check(fit, rl.col = 3)
-gcv.ubre(fit)
-fit$gcv.ubre
-fit$redisuals
-residuals(fit)
-fit$sp # 估计smooth parameter
-fit$aic
-fit$gcv.ubre
-scam.check(fit)
-summary(fit)
+
+
+
+
 
 
 
