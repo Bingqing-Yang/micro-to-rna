@@ -5,23 +5,22 @@ library(mgcv)
 library(scam)
 
 
-#' Fev for Linear square and weighted linear square
+#' Scatter plots for multiple genes
 #'
-#' Calculate fev for linear square and weighted linear square;
-#' Generate scatter plot with regression line for linear and weighted linear square
+#' Automatically draw scatter plots  for multiple genes with prediction interval
 #'
 #'
 #' @param X  microarray data where rows are gene, columns are samples
 #' @param Y  rna-seq data where rows are gene, columns are samples
 #' @param probes  \code{data.frame}, probes information
+#' @param pred \code{list}, predicted result of model containing fit, upper, lower
 #' @param folder folder for saving picture
 #' @param num.pic number of output pictures
+#' @param w weight of weighted linear model
 #' @param level confidence level
 #' @param label whether to label pictures
 #' @param view   whether to show pictures
 #' @param press whether to press to show pictures
-#' @param w weight of weighted linear model
-#' @return list of fev values in linear model \code{fev.lin}, fev values in weighted linear model \code{fev.wlin}
 #' @export
 scatter.s <- function(X, Y, probes, pred, folder, num.pic, w, level, label, view, press) {
   # folder of picture
@@ -116,13 +115,14 @@ curve.scatter <- function(mar, rna, probes, num.pic, meth = "ts", k) {
 
 #' Fraction of explained variance
 #'
-#' This function measure the fitting between true value \code{x}
-#' and predicted value \code{x.hat}.
+#' Calculate the ratio of explained variance between the predictive 
+#' model \code{x.hat} and the true value \code{x}.
 #'
 #' 1 - sum(x - x.hat)^2/sum(x - mean(X))^2
 #'
 #' @param x         true value
 #' @param x.hat     predicted value of model
+#' @return \code{numeric} value
 #' @export
 fev.func <- function(x, x.hat) {
   sse <- sum((x - x.hat)^2)
@@ -133,19 +133,20 @@ fev.func <- function(x, x.hat) {
 
 
 
-#' Linear model or weighted linear model
+#' Linear model
 #'
-#' Implement linear model or weighted linear model according to the input parameter weight;
-#' get prediction interval of specified model;
+#' Implement linear model or weighted linear model based on whether the input
+#' weight parameter are specified
 #'
 #'
+#' @param i  i-th gene/probes
 #' @param X  microarray data where rows are gene, columns are samples
 #' @param Y  rna-seq data where rows are gene, columns are samples
-#' @param i  i-th gene/probes
-#' @param folder folder for saving picture
 #' @param level confidence level
 #' @param weight weight of model
-#' @return list of models \code{model} and prediction interval \code{pred}
+#' @return list of predicted value \code{fit}, lower prediction interval value \code{lwr}, 
+#'         upper prediction interval value \code{upr}, standard error of fitted model \code{se.fit}
+#'         residual of fitted model \code{model.res}
 #' @export
 linear <- function(i, X, Y, level, weight = NULL) {
   model <- lm(Y[i, ] ~ X[i, ], weights = weight)
@@ -189,17 +190,17 @@ linear <- function(i, X, Y, level, weight = NULL) {
 
 #' SCAM model
 #'
-#' Implement scam model or weighted scam model according whether input weight parameter
+#' Implement scam model or weighted scam model based on whether the input
+#' weight parameter are specified
 #' 
 #'
-#'
+#' @param i  i-th gene/probes
+#' @param k.s selection list of k
 #' @param X  microarray data where rows are gene, columns are samples
 #' @param Y  rna-seq data where rows are gene, columns are samples
-#' @param i  i-th gene/probes
 #' @param level confidence level
 #' @param weight weight of model
-#' @return list of response prediction \code{fit} and upper prediction interval \code{upr}
-#'          and lower prediction interval \code{lwr}
+#' @return list of optimal k \code{fit} and prediction result \code{y.pred}
 #' @export
 SCAM.model <- function(i, k.s, X, Y, level, weight = NULL) {
 
@@ -218,19 +219,31 @@ SCAM.model <- function(i, k.s, X, Y, level, weight = NULL) {
   k.lst <- append(k.lst, k.best)
   
   list(
-    k.lst = k.lst,
-    y.pred = y.pred
+    k.opt = k.lst,
+    fit = y.pred$fit,
+    se.fit = y.pred$se.fit,
+    lwr = y.pred$lwr,
+    upr = y.pred$upr
     )
+  
 }
 
 
-# # scatter and prediction model
-# scatter(i, X, Y, probes, y.pred)
 
-
-# Code snippet from Dr.shih of explained-variance and thanks to him
-# Original code: https://github.com/djhshih/explained-variance.git
-# predict mean with prediction interval for new data
+#" Prediction Interval of SCAM
+#'
+#' Calculate prediction interval of scam model in a new data
+#' 
+#' Code snippet from Dr.shih of explained-variance and thanks to him
+#" Original code: https://github.com/djhshih/explained-variance.git
+#' 
+#'
+#' @param model  scam model
+#' @param newdata new data
+#' @param level confidence level
+#' @return list of predicted value \code{fit}, standard error of fitted model \code{se.fit},
+#'         lower prediction interval value \code{lwr} and upper prediction interval value \code{upr}
+#' @export
 predict_interval_scam <- function(model, newdata, level) {
   y.hat <- predict(model, se.fit = TRUE, type = "response", newdata)
 
@@ -260,12 +273,11 @@ predict_interval_scam <- function(model, newdata, level) {
 #'
 #' Scatter plot given predicted result of model for one gene
 #'
-#'
+#' @param i  i-th gene/probes
 #' @param X  microarray data where rows are gene, columns are samples
 #' @param Y  rna-seq data where rows are gene, columns are samples
-#' @param i  i-th gene/probes
 #' @param probes  \code{data.frame}, probes information
-#' @param pred \code{list}, predicted result of model containing fit, upper, lower
+#' @param pred \code{list}, prediction interval of model
 #' @param weight weight of model
 #' @export
 scatter <- function(i, X, Y, probes, pred) {
@@ -314,11 +326,11 @@ search.scatter <- function(X, Y, search_i, probes, pred = NULL) {
 
 #' Mutual information
 #'
-#' Calculate the mutual information between RNA and microarray for each probe
+#' Calculate the mutual information between Microarray and RNA-seq data
 #'
 #' @param X  Microarray data where rows are gene, columns are samples
 #' @param Y  RNA-seq data where rows are gene, columns are samples
-#' @return  \code{list} of mutual information for each genes
+#' @return \code{list}, mutual information for each genes
 #' @export
 mutual_info <- function(X, Y, meth = "equalfreq") {
   X.T <- t(X)
@@ -335,7 +347,14 @@ mutual_info <- function(X, Y, meth = "equalfreq") {
 }
 
 
-
+#' Parameter selection of k in SCAM
+#'
+#' Choose the optimal k
+#'
+#' @param X  Microarray data of one probe
+#' @param Y  RNA-seq data of one gene
+#' @return \code{numeric}, value of optimal k
+#' @export
 k.selection <- function(x, y, k.s){
   data.s <- data.frame()
   for (i in k.s) {
@@ -345,7 +364,7 @@ k.selection <- function(x, y, k.s){
       
       data <- data.frame(
         k = i,
-        sp = fit$sp, # 估计smooth parameter
+        sp = fit$sp, 
         aic = fit$aic,
         gcv = fit$gcv.ubre,
         res.2 = sum(fit$residuals^2)
