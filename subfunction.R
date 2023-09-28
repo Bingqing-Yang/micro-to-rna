@@ -42,16 +42,8 @@ scatter.s <- function(X, Y, probes, pred, folder, num.pic, w, level, label, view
 
   fev.lin <- c()
   for (i in 1:(num.pic)) {
-    # # Fit liner model and Prediction: PI
-    # lin.pred <- linear(i, X = X, Y = Y, level = level, weight = w)
-    # 
-    # # fev in model
-    # fev.hat <- fev.func(Y[i, ], lin.pred$fit)
-    # fev.lin <- append(fev.lin, fev.hat)
-    # 
-    # 
-    # # Scatter plot with PI
-    # predict.interval <- lin.pred[c(1:3)]
+
+    # Scatter plot with PI
     predict.interval <- pred[[i]][c(1:3)]
     scatter(i, X, Y, probes, pred = predict.interval)
 
@@ -75,7 +67,7 @@ scatter.s <- function(X, Y, probes, pred, folder, num.pic, w, level, label, view
       print(paste("Processing item:", i))
     }
   }
-  # return(fev.lin)
+
 }
 
 # Generate fev, prediction band based on scam and scatter plots
@@ -101,7 +93,7 @@ curve.scatter <- function(mar, rna, probes, num.pic, meth = "ts", k) {
     d <- data.frame(x1 = x1)
     x2.hat <- predict_interval_scam(fit, d)
 
-    # # scatter and prediction model
+    # Scatter plot with PI
     scatter(i, mar, rna, probes, x2.hat)
 
     fev.hat <- fev.func(x2, fit$fitted.values)
@@ -160,10 +152,6 @@ linear <- function(i, X, Y, level, weight = NULL) {
   }
   y.hat <- predict(model, newdata = new, weights = weight, interval = "prediction", level)
   y.pred <- predict(model, newdata = new, weights = weight, interval = "prediction", level)
-  # # WLSE prediction band
-  # wy.pred <- predict.lm(weight.model, newdata = new, weights = weight, interval = "prediction", level)
-  # wy.hat <- predict.lm(weight.model, newdata = new, weights = weight, interval = "prediction", level)
-
 
   pred <- list(
     fit = y.hat$fit[, 1],
@@ -172,20 +160,6 @@ linear <- function(i, X, Y, level, weight = NULL) {
     fit.se = y.hat$se.fit,
     model.res = model$residuals
   )
-  # weight.pred <- data.frame(
-  #   fit = wy.hat$fit[, 1],
-  #   lwr = wy.pred$fit[, 2],
-  #   upr = wy.pred$fit[, 3]
-  # )
-
-
-  # output <- list()
-  # output$model <- model
-  # # output$wmodel <- weight.model
-  # output$pred <- pred
-  # # output$wpred <- weight.pred
-
-
 }
 
 #' SCAM model
